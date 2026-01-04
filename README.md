@@ -29,7 +29,7 @@ Before making any changes, copy the original files and store them somewhere safe
 
 1. Close **Megabonk**
 2. Press `Win + R` and type: `%appdata%`
-3. Navigate to: `..\LocalLow\Ved\Megabonk\Saves\CloudDir\<id>\`
+3. Navigate **one directory back** to: `..\LocalLow\Ved\Megabonk\Saves\CloudDir\<id>\`
 4. Open `progression.json` and/or `stats.json`
 5. **Replace the entire content** with the content from this repository
 6. Save the files
@@ -39,7 +39,7 @@ Before making any changes, copy the original files and store them somewhere safe
 
 1. Close **Megabonk**
 2. Press `Win + R` and type: `%appdata%`
-3. Navigate to: `..\LocalLow\Ved\Megabonk\Saves\CloudDir\<id>\`
+3. Navigate **one directory back** to: `..\LocalLow\Ved\Megabonk\Saves\CloudDir\<id>\`
 4. Download the files from this repository
 5. **Overwrite** the existing files:
 - `progression.json`
