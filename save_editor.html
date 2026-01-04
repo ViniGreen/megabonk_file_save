@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Megabonk Save Editor</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#151821; --panel2:#1b2030; --text:#e6e9ef; --muted:#9aa4b2;
+      --border:#24283a; --code:#0c0f14; --ok:#55d187; --danger:#ff6b6b; --accent:#6ea8fe;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg); color:var(--text); display:flex; flex-direction:column;
+    }
+    header{
+      background:linear-gradient(90deg,var(--panel),var(--panel2));
+      border-bottom:1px solid var(--border);
+      padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    header h1{font-size:16px; margin:0; letter-spacing:.3px}
+    .pill{border:1px solid var(--border); background:#0f1320; padding:6px 10px; border-radius:999px; color:var(--muted)}
+    .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    button{
+      background:var(--panel2); color:var(--text); border:1px solid var(--border);
+      border-radius:8px; padding:8px 10px; cursor:pointer; font-weight:600;
+    }
+    button:hover{filter:brightness(1.1)}
+    button:disabled{opacity:.6; cursor:not-allowed}
+
+    input[type="file"]{display:none}
+    .file-label{
+      border:1px dashed var(--border); background:#101520; padding:8px 12px; border-radius:8px;
+      cursor:pointer; color:var(--muted);
+    }
+
+    .status{
+      margin-left:auto; display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px;
+    }
+    .chip{
+      padding:2px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .dot{width:10px; height:10px; border-radius:50%}
+    .dot.ok{background:var(--ok)}
+    .dot.bad{background:var(--danger)}
+    .dot.neutral{background:var(--accent)}
+
+    .main{padding:12px; height:100%; min-height:0; display:flex}
+    .panel{
+      flex:1; background:var(--panel); border:1px solid var(--border); border-radius:12px;
+      display:flex; flex-direction:column; min-height:0;
+    }
+    .panel h3{
+      margin:0; padding:10px 12px; border-bottom:1px solid var(--border);
+      background:#111624; font-size:13px; color:var(--muted);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    textarea{
+      flex:1 1 auto; padding:12px; border:0; background:var(--code); color:#d5e2ff;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:13px; resize:none; outline:none;
+    }
+    .footer{
+      border-top:1px solid var(--border); background:var(--panel);
+      padding:8px 12px; display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      color:var(--muted); font-size:12px;
+    }
+    .kbd{font-family:ui-monospace,monospace; background:#0b1220; border:1px solid var(--border);
+      padding:1px 6px; border-radius:6px; font-size:12px; color:var(--text)}
+    .toast{
+      position:fixed; bottom:14px; right:14px; background:#0b1220; border:1px solid var(--border);
+      box-shadow:0 10px 30px rgba(0,0,0,.35); color:var(--text);
+      padding:10px 12px; border-radius:10px; opacity:0; transform:translateY(10px);
+      transition:.25s ease; pointer-events:none;
+    }
+    .toast.show{opacity:1; transform:translateY(0)}
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Megabonk Save Editor</h1>
+
+    <label class="file-label" for="fileInput">Select file…</label>
+    <input id="fileInput" type="file" />
+
+    <div class="toolbar">
+      <button id="btnLoad">Load</button>
+      <button id="btnDecrypt" disabled>Decrypt</button>
+      <button id="btnEncrypt" disabled>Encrypt</button>
+      <button id="btnSave" disabled>Save</button>
+    </div>
+
+    <div class="status">
+      <span id="fileChip" class="chip">No file</span>
+      <span id="validChip" class="chip"><span id="validDot" class="dot neutral"></span><span id="validText">Unknown</span></span>
+      <span id="stateChip" class="chip">Idle</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="panel">
+      <h3>
+        <span>Editor</span>
+        <span class="chip" id="jsonChip"><span id="jsonDot" class="dot neutral"></span><span id="jsonText">Not checked</span></span>
+      </h3>
+      <textarea id="txt" placeholder="Load a save file, then Decrypt → edit → Encrypt → Save…"></textarea>
+      <div class="footer">
+        <span>
+          Shortcuts:
+          <span class="kbd">Ctrl/Cmd+S</span> save
+          <span class="kbd">Ctrl/Cmd+Enter</span> decrypt
+          <span class="kbd">Ctrl/Cmd+Shift+Enter</span> encrypt
+        </span>
+        <span id="nlInfo">NL: LF</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const defaultIvBytes  = [55,134,78,241,92,36,188,10,203,198,14,57,120,239,31,6];
+    const defaultKeyBytes = [217,64,132,13,90,231,199,144,123,9,36,55,188,12,91,68,170,247,14,39,62,18,208,251,77,162,184,199,103,204,145,29];
+
+    const bytesToHex = arr => Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+    const hexToWordArray = hex => CryptoJS.enc.Hex.parse(hex);
+
+    const state = {
+      file: null,
+      fileName: "",
+      nl: "\n",
+      keyHex: bytesToHex(defaultKeyBytes),
+      ivHex: bytesToHex(defaultIvBytes),
+      isDecrypted: false
+    };
+
+    const $ = s => document.querySelector(s);
+
+    const showToast = (msg, kind="info") => {
+      const t = $("#toast");
+      t.textContent = msg;
+      t.style.borderColor = kind === "error" ? "var(--danger)" : "var(--border)";
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2200);
+    };
+
+    const guessNewline = (text) => text.includes("\r\n") ? "\r\n" : "\n";
+
+    const setDot = (dotEl, cls) => {
+      dotEl.classList.remove("ok","bad","neutral");
+      dotEl.classList.add(cls);
+    };
+
+    const setValidity = (ok, label) => {
+      $("#validText").textContent = label;
+      setDot($("#validDot"), ok ? "ok" : "bad");
+    };
+
+    const setJsonStatus = (status) => {
+      $("#jsonText").textContent = status;
+      if (status === "Valid JSON") setDot($("#jsonDot"), "ok");
+      else if (status === "Not JSON") setDot($("#jsonDot"), "bad");
+      else setDot($("#jsonDot"), "neutral");
+    };
+
+    const setChips = () => {
+      $("#fileChip").textContent = state.fileName || "No file";
+      $("#stateChip").textContent = state.file ? (state.isDecrypted ? "Decrypted" : "Loaded") : "Not Loaded";
+      $("#nlInfo").textContent = "NL: " + (state.nl === "\r\n" ? "CRLF" : "LF");
+
+      const hasFile = !!state.fileName;
+      const hasText = $("#txt").value.trim().length > 0;
+
+      $("#btnDecrypt").disabled = !(hasFile && hasText); 
+      $("#btnEncrypt").disabled = !(hasFile && hasText); 
+      $("#btnSave").disabled    = !(hasFile && hasText);
+    };
+
+    const getWordArrays = () => ({
+      keyWA: hexToWordArray(state.keyHex),
+      ivWA: hexToWordArray(state.ivHex),
+    });
+
+    const decryptText = (b64) => {
+      const { keyWA, ivWA } = getWordArrays();
+      const trimmed = (b64 || "").trim();
+      if (!trimmed) throw new Error("Empty input");
+      try {
+        const cipherParams = CryptoJS.lib.CipherParams.create({
+          ciphertext: CryptoJS.enc.Base64.parse(trimmed)
+        });
+        const dec = CryptoJS.AES.decrypt(cipherParams, keyWA, {
+          iv: ivWA,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+        });
+        const out = CryptoJS.enc.Utf8.stringify(dec);
+        if (!out) throw new Error("Decryption produced empty text (wrong key/iv or invalid input).");
+        return out;
+      } catch (e) {
+        throw new Error("Failed to decrypt: " + e.message);
+      }
+    };
+
+    const encryptText = (plain) => {
+      const { keyWA, ivWA } = getWordArrays();
+      const enc = CryptoJS.AES.encrypt(plain, keyWA, {
+        iv: ivWA,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+      return enc.ciphertext.toString(CryptoJS.enc.Base64);
+    };
+
+    const isProbablyBase64 = (s) => {
+      const t = (s || "").trim();
+      if (t.length < 16) return false;
+      if (!/^[A-Za-z0-9+/=\r\n]+$/.test(t)) return false;
+      return true;
+    };
+
+    const tryParseJson = (text) => {
+      const t = (text || "").trim();
+      if (!t) return false;
+      try { JSON.parse(t); return true; } catch { return false; }
+    };
+
+    const refreshIndicators = () => {
+      const val = $("#txt").value;
+      if (!state.isDecrypted) {
+        const ok = isProbablyBase64(val);
+        setValidity(ok, ok ? "Looks encrypted" : "Not base64?");
+        setJsonStatus("Not checked");
+      } else {
+        const ok = val.trim().length > 0;
+        setValidity(ok, ok ? "Plaintext OK" : "Empty");
+        setJsonStatus(tryParseJson(val) ? "Valid JSON" : "Not JSON");
+      }
+      setChips();
+    };
+
+    // Events 
+    $("#btnLoad").addEventListener("click", () => {
+      const fi = $("#fileInput");
+      if (!fi.files || fi.files.length === 0) { showToast("No file selected", "error"); return; }
+      const f = fi.files[0];
+      state.file = f;
+      state.fileName = f.name;
+      const r = new FileReader();
+      r.onload = () => {
+        const content = String(r.result || "");
+        $("#txt").value = content;
+        state.nl = guessNewline(content);
+        state.isDecrypted = false;
+        showToast("File loaded");
+        refreshIndicators();
+      };
+      r.onerror = () => showToast("Error reading file", "error");
+      r.readAsText(f);
+    });
+
+    $("#btnDecrypt").addEventListener("click", () => {
+      try {
+        const raw = $("#txt").value;
+        const dec = decryptText(raw);
+        state.nl = guessNewline(dec);
+        $("#txt").value = dec;
+        state.isDecrypted = true;
+        showToast("Decrypted");
+        refreshIndicators();
+      } catch (e) {
+        state.isDecrypted = false;
+        setValidity(false, "Decrypt failed");
+        showToast(e.message, "error");
+      }
+    });
+
+    $("#btnEncrypt").addEventListener("click", () => {
+      try {
+        const plain = $("#txt").value.replace(/\r?\n/g, state.nl);
+        const enc = encryptText(plain);
+        $("#txt").value = enc;
+        state.isDecrypted = false;
+        showToast("Encrypted");
+        refreshIndicators();
+      } catch (e) {
+        showToast("Encryption failed: " + e.message, "error");
+      }
+    });
+
+    $("#btnSave").addEventListener("click", () => {
+      const name = state.fileName || "save.txt";
+      const content = $("#txt").value;
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast("Saved '" + name + "'");
+    });
+
+    $("#txt").addEventListener("input", refreshIndicators);
+
+    document.addEventListener("keydown", (e) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+
+      const k = e.key.toLowerCase();
+
+      if (k === "s") { e.preventDefault(); if (!$("#btnSave").disabled) $("#btnSave").click(); }
+
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (!$("#btnDecrypt").disabled) $("#btnDecrypt").click();
+      }
+
+      if (e.key === "Enter" && e.shiftKey) {
+        e.preventDefault();
+        if (!$("#btnEncrypt").disabled) $("#btnEncrypt").click();
+      }
+    });
+
+    setDot($("#validDot"), "neutral");
+    setDot($("#jsonDot"), "neutral");
+    $("#validText").textContent = "Unknown";
+    $("#jsonText").textContent = "Not checked";
+    setChips();
+  </script>
+</body>
+</html>
