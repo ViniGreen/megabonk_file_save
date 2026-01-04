@@ -94,9 +94,7 @@ This is expected behavior.
 ### 8. Replace the Save File
 - Copy the saved file to:`<drive>:\Users\<user>\AppData\LocalLow\Ved\Megabonk\Saves\CloudDir\<id>\`
 
----
-
-##📝Notes
+### 📝Notes
 - ✅Green indicator = valid state  
 - 🔴Red indicator  = invalid or failed operation  
 - 🔶Yellow/neutral indicator = not yet checked
