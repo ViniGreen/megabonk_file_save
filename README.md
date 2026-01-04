@@ -103,6 +103,6 @@ This is expected behavior.
 
 ### References:
 
-https://thunderstore.io/c/megabonk/p/LethalM/Megabonk_Save_Editor_Unlock_All/
-https://www.unknowncheats.me/forum/other-games/718985-megabonk-complete-unlock-save-file-encryption-methods.html#post4483782
-https://www.nexusmods.com/megabonk/mods/33
+- https://thunderstore.io/c/megabonk/p/LethalM/Megabonk_Save_Editor_Unlock_All/
+- https://www.unknowncheats.me/forum/other-games/718985-megabonk-complete-unlock-save-file-encryption-methods.html#post4483782
+- https://www.nexusmods.com/megabonk/mods/33
