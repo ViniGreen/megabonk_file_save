@@ -56,3 +56,48 @@ If Steam shows a **Cloud Sync Conflict** message:
 - Steam will automatically sync the local files to the cloud
 
 This is expected behavior.
+
+---
+
+# 💻Megabonk Save Editor
+
+## ⚠️How to Use
+
+### 1. Open the Editor
+- Open the `save_editor.html` file in your browser (Chrome, Firefox, Edge).
+
+### 2. Select the Save File
+- Click **Select file…**
+- Choose one of the Megabonk save files (for example `progression.json` or `stats.json`).
+
+### 3. Load the File
+- Click **Load**  
+- The file contents will appear in the editor.
+
+### 4. Decrypt
+- Click **Decrypt**  
+- The encrypted content will be converted into readable text.
+- If the file is valid, the status indicator will turn green.
+
+### 5. Edit
+- Modify the decrypted content directly in the editor.
+- If the content is valid JSON, the editor will indicate it automatically.
+
+### 6. Encrypt
+- After finishing your edits, click **Encrypt**  
+- The content will be converted back to the encrypted format expected by the game.
+
+### 7. Save
+- Click **Save**
+- The edited file will be downloaded with the same filename.
+
+### 8. Replace the Save File
+- Copy the saved file to:`<drive>:\Users\<user>\AppData\LocalLow\Ved\Megabonk\Saves\CloudDir\<id>\`
+
+---
+
+##📝Notes
+- ✅Green indicator = valid state  
+- 🔴Red indicator  = invalid or failed operation  
+- 🔶Yellow/neutral indicator = not yet checked
+
